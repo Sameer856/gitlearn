@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow-x: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .scroll-container {
+            height: 300vh;
+            position: relative;
+        }
+
+        .main-content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .left-panel {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            color: white;
+            z-index: 1001;
+        }
+
+        .right-panel {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            color: white;
+            z-index: 1001;
+        }
+
+        .panel-content {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #4ecdc4;
+        }
+
+        .panel-text {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .frame-counter {
+            font-size: 0.9rem;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .image-container {
+            position: relative;
+            z-index: 1000;
+        }
+
+        .frame-image {
+            max-width: 60vw;
+            max-height: 80vh;
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 1.2rem;
+            text-align: center;
+            z-index: 1001;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1200px) {
+            .left-panel, .right-panel {
+                width: 250px;
+            }
+            
+            .panel-content {
+                padding: 20px;
+            }
+            
+            .frame-image {
+                max-width: 70vw;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .left-panel, .right-panel {
+                position: relative;
+                width: 100%;
+                margin: 20px 0;
+                transform: none;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                padding: 20px;
+            }
+            
+            .frame-image {
+                max-width: 90vw;
+                margin: 20px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading animation...</div>
+    </div>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="panel-content">
+                <div class="panel-title">🎬 Animation Control</div>
+                <div class="panel-text">
+                    Scroll up and down to control the animation sequence. The image will advance through all 149 frames as you scroll through the page.
+                </div>
+                <div class="panel-text">
+                    Each scroll movement corresponds to a specific frame in the animation, giving you precise control over the playback.
+                </div>
+                <div class="frame-counter" id="leftFrameCounter">
+                    Frame: 0002 / 149
+                </div>
+            </div>
+        </div>
+
+        <div class="image-container">
+            <img class="frame-image" id="frameImage" style="display: none;">
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-content">
+                <div class="panel-title">📊 Animation Info</div>
+                <div class="panel-text">
+                    This animation contains 149 frames ranging from 0002.png to 0150.png, creating a smooth visual sequence.
+                </div>
+                <div class="panel-text">
+                    The scroll-based control allows for intuitive navigation through the animation timeline, making it easy to find specific moments.
+                </div>
+                <div class="frame-counter" id="rightFrameCounter">
+                    Progress: 0%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="scroll-container"></div>
+
+    <script>
+        class ScrollAnimation {
+            constructor() {
+                this.frames = [];
+                this.currentFrame = 0;
+                this.totalFrames = 149;
+                this.startFrame = 2;
+                this.endFrame = 150;
+                this.isLoading = true;
+                
+                this.init();
+            }
+
+            async init() {
+                await this.preloadFrames();
+                this.setupScrollListener();
+                this.updateDisplay();
+                this.hideLoading();
+            }
+
+            async preloadFrames() {
+                const loadingPromises = [];
+                
+                for (let i = this.startFrame; i <= this.endFrame; i++) {
+                    const frameNumber = i.toString().padStart(4, '0');
+                    const img = new Image();
+                    img.src = `robo 1/${frameNumber}.png`;
+                    
+                    const loadPromise = new Promise((resolve) => {
+                        img.onload = () => resolve(img);
+                        img.onerror = () => {
+                            console.warn(`Failed to load frame ${frameNumber}`);
+                            resolve(null);
+                        };
+                    });
+                    
+                    loadingPromises.push(loadPromise);
+                }
+
+                const loadedFrames = await Promise.all(loadingPromises);
+                this.frames = loadedFrames.filter(frame => frame !== null);
+                this.totalFrames = this.frames.length;
+            }
+
+            setupScrollListener() {
+                window.addEventListener('scroll', () => {
+                    this.handleScroll();
+                });
+            }
+
+            handleScroll() {
+                const scrollTop = window.pageYOffset;
+                const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+                const scrollProgress = Math.min(scrollTop / maxScroll, 1);
+                
+                this.currentFrame = Math.floor(scrollProgress * (this.totalFrames - 1));
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                if (this.frames.length === 0) return;
+
+                const frameImage = document.getElementById('frameImage');
+                const leftFrameCounter = document.getElementById('leftFrameCounter');
+                const rightFrameCounter = document.getElementById('rightFrameCounter');
+                
+                const currentFrameImg = this.frames[this.currentFrame];
+                
+                if (currentFrameImg) {
+                    frameImage.src = currentFrameImg.src;
+                    frameImage.style.display = 'block';
+                }
+
+                const frameNumber = this.currentFrame + this.startFrame;
+                const progress = Math.round((this.currentFrame / (this.totalFrames - 1)) * 100);
+                
+                leftFrameCounter.textContent = `Frame: ${frameNumber.toString().padStart(4, '0')} / ${this.totalFrames}`;
+                rightFrameCounter.textContent = `Progress: ${progress}%`;
+            }
+
+            hideLoading() {
+                this.isLoading = false;
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Initialize the animation when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ScrollAnimation();
+        });
+    </script>
+</body>
+</html> 
